@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
-	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"os"
 )
 
@@ -19,6 +19,7 @@ var router *gin.Engine
 func main() {
 	router = gin.Default()
 	router.POST("/mo/callback/", scefHandler)
+	router.GET("/mo/callback/", scefHandlerGet)
 	router.Run(":7000")
 }
 
@@ -139,4 +140,10 @@ func send_data(data string) {
 		client.Disconnect(10)
 		fmt.Println("Sample Subscriber Disconnected")
 	}
+}
+
+func scefHandlerGet(c *gin.Context){
+	c.JSON(200, gin.H{
+		"message": "It Worked",
+	})
 }

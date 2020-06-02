@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
+	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"os"
 )
 
@@ -19,7 +19,7 @@ var router *gin.Engine
 func main() {
 	router = gin.Default()
 	router.POST("/mo/callback/", scefHandler)
-	router.Run(":5000")
+	router.Run(":7000")
 }
 
 func scefHandler(c *gin.Context) {

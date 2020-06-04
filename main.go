@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
-	MQTT "github.com/eclipse/paho.mqtt.golang"
-	"os"
+
+	"github.com/amenzhinsky/iothub/iotdevice"
+	iotmqtt "github.com/amenzhinsky/iothub/iotdevice/transport/mqtt"
 )
 
 type ScefData struct {
@@ -14,12 +17,47 @@ type ScefData struct {
 	Msisdn string `json: msisdn`
 }
 
+var index int = 0
 var router *gin.Engine
+var connectinStrings [32]string = [32]string{
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_1;SharedAccessKey=TFIWmO9qj3aBiJhTffhJbEz5vCOgC5qG+bYosS2J5Zo=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_2;SharedAccessKey=l4mnChokjqjW+NmR6VWMAWBzhK2jo/X4zYB45tNzl7c=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_3;SharedAccessKey=cPvQelbknUqwXXksdumBZca75hHF6a+ObJqwC5eaQAo=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_4;SharedAccessKey=Vpfzc6YT4bkpnWPidNv2ZA84mizrwpQHbyGzyzcfSBI=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_5;SharedAccessKey=rN8zgh1/admTPpvEQlNrKALvGaj3QIZsYnufT9IPtoQ=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_6;SharedAccessKey=JvxNrcCLQGJVUNWrq+Gk53ZHiaueOhvdc83wkD+NJ1E=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_7;SharedAccessKey=4ksCHG7I0r3yBbfLUpfgJvLuplkT5sSJlI741ItJln8=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_8;SharedAccessKey=4uvUHGRAWAjBAqNITTfcMX21iGRnlG5L1NBwEydbuuE=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_9;SharedAccessKey=wHTT8Fs4Gqlg/da6M3dcLS342QRFeh5BSEVIsfOhdck=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_10;SharedAccessKey=xrDIYDi9cJwlbw409nUW075jnUgdzy3Qs5WHkbpcJak=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_11;SharedAccessKey=ljrnqFMsoofm2umLhMf66nw0qNzrUat14swv2/ai1VQ=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_12;SharedAccessKey=F8AdPjpiEjgbW7CeKIGGRRafa3RdKi51arvqJoWxx+k=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_13;SharedAccessKey=q6TxvSk5aXVVwgyGwMVgInKJTJVu6G/jgiYFLYpqY4Y=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_14;SharedAccessKey=0lMTgFN3cza35GaRZRMBJAx6jLnlvu+ylte8tu8ZPBk=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_15;SharedAccessKey=FUKAJPlmzijxup+go2Z39iGnxbOuhp1d1+kXo+Xuo3U=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_16;SharedAccessKey=mh4r1khaxLpUxKMTl4QHQPnbZS+MWC8rvigtDBBAVGw=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_17;SharedAccessKey=UzzF58OJgAtzsbTQzBNejc+ihZyfkKwebzBgIA+Os/E=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_18;SharedAccessKey=NIYaVvSjp5n+PTHFOeUK+b/UzNo83wxcUWv0bDIz9d0=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_19;SharedAccessKey=eVpMLwby41Gs8S82xJ+HoZ9c4lEOsucoIfyCYqd9IP0=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_20;SharedAccessKey=SDWCRC/99yLw6OSK9jJpyF6koONcYfY/xs0QQgiVSUY=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_21;SharedAccessKey=ByOkFeTfXk44owlSbFZh1iebIeSK32e2QRTtgMEjZ3E=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_22;SharedAccessKey=5xGfvvyTK6FIXfH0RU5Xq9+HqeF+7OjGFL72neE0t8Q=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_23;SharedAccessKey=u03hDshv7Ks3+OoJN2WHh0AosHQqcoacIMt23B+YSaw=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_24;SharedAccessKey=Ce5MynfeIKQrQfHqYBgZ69VCwDnN+ynBOCE74KpG1po=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_25;SharedAccessKey=h6MvwyrcgTWdxWwSSzPIVdS58DK1XQNbeh2FqiWOI2g=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_26;SharedAccessKey=qUbb4xX30NCEPs+VY6/G2PMnoJi8XonVLYyAY4PEzzc=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_27;SharedAccessKey=OytCK2DXOTksy4SXZhMNl1DGjctHm+IUcj2VTMZBC9Q=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_28;SharedAccessKey=HLY44ilQ75Ilf7T//kqTTm1kYMvNtYhsTXViQvsfhKw=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_29;SharedAccessKey=1kV8tan04eySHFx+0s0GNmieF1or6sD1LrTD1wbTNfg=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_30;SharedAccessKey=4F4pW/zvXvTu+GvRVNmn7E4+mQxJamAw152oDD2nZko=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_31;SharedAccessKey=ORnwOteJ3pSr1ImRR8CM9YWdceBlWzfEjMYqqd71d3E=",
+	"HostName=jio-iot-hub.azure-devices.net;DeviceId=jio_device_32;SharedAccessKey=46fKtbdhQeeX35ue0Ic3LZmmNkI9ockrdGeRvPpPu7g=",
+}
 
 func main() {
 	router = gin.Default()
-	router.POST("/mo/callback/", scefHandler)
-	router.GET("/mo/callback/", scefHandlerGet)
+	router.POST("/callback/", scefHandler)
+	router.GET("/callback/", scefHandlerGet)
 	router.Run(":7000")
 }
 
@@ -35,114 +73,46 @@ func scefHandler(c *gin.Context) {
 	}
 
 	fmt.Println(string(sDec))
-	go send_data(string(sDec))
+
+	if index >= 31 {
+		index = 0
+	}
+	fmt.Println(index)
+	fmt.Println(connectinStrings[index])
+	go send_data(connectinStrings[index], string(sDec))
+	index = index + 1
 	c.Status(http.StatusNoContent)
 
 }
 
-func send_data(data string) {
-	//topic := flag.String("topic", "", "The topic name to/from which to publish/subscribe")
-	//broker := flag.String("broker", "tcp://iot.eclipse.org:1883", "The broker URI. ex: tcp://10.10.1.1:1883")
-	//password := flag.String("password", "", "The password (optional)")
-	//user := flag.String("user", "", "The User (optional)")
-	//id := flag.String("id", "testgoid", "The ClientID (optional)")
-	//cleansess := flag.Bool("clean", false, "Set Clean Session (default false)")
-	//qos := flag.Int("qos", 0, "The Quality of Service 0,1,2 (default 0)")
-	//num := flag.Int("num", 1, "The number of messages to publish or subscribe (default 1)")
-	//payload := flag.String("message", "", "The message text to publish (default empty)")
-	//action := flag.String("action", "", "Action publish or subscribe (required)")
-	//store := flag.String("store", ":memory:", "The Store Directory (default use memory store)")
-	//flag.Parse()
-	topic := "devices/jio_device_23/messages/events/"
-	action := "pub"
-	broker := "ssl://jio-iot-hub.azure-devices.net:8883"
-	user := "jio-iot-hub.azure-devices.net/jio_device_23/?api-version=2018-06-30"
-	password := "SharedAccessSignature sr=jio-iot-hub.azure-devices.net%2Fdevices%2Fjio_device_23&sig=WxAhEEqnaDwCauZEAOzzMMj5SO8lMN5ka8%2FvItP%2BhM8%3D&se=1591081761"
-	id := "jio_device_23"
-	cleansess := false
-	qos := 0
-	num := 1
-	store := ":memory:"
-	payload := data
+func send_data(connectionString string, data string) {
 
-	if action != "pub" && action != "sub" {
-		fmt.Println("Invalid setting for -action, must be pub or sub")
-		return
+	var client *iotdevice.Client
+	var err error
+	client, err = iotdevice.NewFromConnectionString(
+		iotmqtt.New(), connectionString,
+	)
+	fmt.Printf("%T\n", client)
+	fmt.Printf("%T\n", err)
+	fmt.Println(client)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	if topic == "" {
-		fmt.Println("Invalid setting for -topic, must not be empty")
-		return
+	// connect to the iothub
+	if err = client.Connect(context.Background()); err != nil {
+		fmt.Println("debug 2")
+		log.Fatal(err)
 	}
-
-	fmt.Printf("Sample Info:\n")
-	fmt.Printf("\taction:    %s\n", action)
-	fmt.Printf("\tbroker:    %s\n", broker)
-	fmt.Printf("\tclientid:  %s\n", id)
-	fmt.Printf("\tuser:      %s\n", user)
-	fmt.Printf("\tpassword:  %s\n", password)
-	fmt.Printf("\ttopic:     %s\n", topic)
-	fmt.Printf("\tmessage:   %s\n", payload)
-	fmt.Printf("\tqos:       %d\n", qos)
-	fmt.Printf("\tcleansess: %v\n", cleansess)
-	fmt.Printf("\tnum:       %d\n", num)
-	fmt.Printf("\tstore:     %s\n", store)
-
-	opts := MQTT.NewClientOptions()
-	opts.AddBroker(broker)
-	opts.SetClientID(id)
-	opts.SetUsername(user)
-	opts.SetPassword(password)
-	opts.SetCleanSession(cleansess)
-	if store != ":memory:" {
-		opts.SetStore(MQTT.NewFileStore(store))
-	}
-
-	if action == "pub" {
-		client := MQTT.NewClient(opts)
-		if token := client.Connect(); token.Wait() && token.Error() != nil {
-			fmt.Println("Creating connection")
-			panic(token.Error())
-		}
-		fmt.Println("Sample Publisher Started")
-		for i := 0; i < num; i++ {
-			fmt.Println("---- doing publish ----")
-			token := client.Publish(topic, byte(qos), false, payload)
-			token.Wait()
-		}
-
-		client.Disconnect(250)
-		fmt.Println("Sample Publisher Disconnected")
-	} else {
-		receiveCount := 0
-		choke := make(chan [2]string)
-
-		opts.SetDefaultPublishHandler(func(client MQTT.Client, msg MQTT.Message) {
-			choke <- [2]string{msg.Topic(), string(msg.Payload())}
-		})
-
-		client := MQTT.NewClient(opts)
-		if token := client.Connect(); token.Wait() && token.Error() != nil {
-			panic(token.Error())
-		}
-
-		if token := client.Subscribe(topic, byte(qos), nil); token.Wait() && token.Error() != nil {
-			fmt.Println(token.Error())
-			os.Exit(1)
-		}
-
-		for receiveCount < num {
-			incoming := <-choke
-			fmt.Printf("RECEIVED TOPIC: %s MESSAGE: %s\n", incoming[0], incoming[1])
-			receiveCount++
-		}
-
-		client.Disconnect(10)
-		fmt.Println("Sample Subscriber Disconnected")
+	fmt.Println(data)
+	// send a device-to-cloud message
+	if err = client.SendEvent(context.Background(), []byte(data)); err != nil {
+		fmt.Println("debug 3")
+		log.Fatal(err)
 	}
 }
 
-func scefHandlerGet(c *gin.Context){
+func scefHandlerGet(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": "It Worked",
 	})

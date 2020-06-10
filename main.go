@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"log"
 	"net/http"
 
 	"github.com/amenzhinsky/iothub/iotdevice"
@@ -79,6 +78,7 @@ func scefHandler(c *gin.Context) {
 	}
 	fmt.Println(index)
 	fmt.Println(connectinStrings[index])
+
 	go send_data(connectinStrings[index], string(sDec))
 	index = index + 1
 	c.Status(http.StatusNoContent)
@@ -96,19 +96,20 @@ func send_data(connectionString string, data string) {
 	fmt.Printf("%T\n", err)
 	fmt.Println(client)
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
+		fmt.Println("Error in creating new connection")
 	}
 
 	// connect to the iothub
 	if err = client.Connect(context.Background()); err != nil {
 		fmt.Println("debug 2")
-		log.Fatal(err)
+		//log.Fatal(err)
 	}
 	fmt.Println(data)
 	// send a device-to-cloud message
 	if err = client.SendEvent(context.Background(), []byte(data)); err != nil {
 		fmt.Println("debug 3")
-		log.Fatal(err)
+		//log.Fatal(err)
 	}
 }
 

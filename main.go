@@ -17,7 +17,7 @@ type ScefData struct {
 	Msisdn string `json: msisdn`
 }
 
-var index int = 0
+var index int
 var router *gin.Engine
 var connectinStrings [32]string = [32]string{
 	"HostName=jio-iot-central.azure-devices.net;DeviceId=jio_device_01;SharedAccessKey=0IdXWVPsoS6ImzITBxt/4AbR352DwNG7wUJjeKtdsWg=",
@@ -100,13 +100,13 @@ func scefHandler(c *gin.Context) {
 
 	fmt.Println(string(sDec))
 
-	if index >= 31 {
+	if index > len(clients) {
 		index = 0
 	}
 	fmt.Println(index)
 	fmt.Println(connectinStrings[index])
 	go send_data(index, string(sDec))
-	index = index + 1
+	index++
 	c.Status(http.StatusNoContent)
 
 }
